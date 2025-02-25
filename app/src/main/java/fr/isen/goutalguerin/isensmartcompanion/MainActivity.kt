@@ -30,6 +30,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
+import androidx.lifecycle.viewmodel.compose.viewModel  // This is to access the viewModel function
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,7 +63,11 @@ fun MainApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("home") { MainScreen() }
-            composable("events") { EventsScreen() }
+            composable("events") {
+                // Pass the EventsViewModel instance here
+                val eventsViewModel: EventsViewModel = viewModel()  // Create the ViewModel instance
+                EventsScreen(viewModel = eventsViewModel)  // Pass it to EventsScreen
+            }
             composable("history") { HistoryScreen() }
         }
     }
@@ -166,8 +172,6 @@ fun MainScreen() {
         )
     }
 }
-
-
 
 @Composable
 fun HistoryScreen() {
