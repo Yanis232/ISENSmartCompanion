@@ -2,12 +2,13 @@ package fr.isen.goutalguerin.isensmartcompanion
 
 import retrofit2.Call
 import retrofit2.http.GET
+import retrofit2.http.Path
 
 interface ApiService {
     @GET("events.json")
     fun getEvents(): Call<List<Event>>
 
-   // @GET("events/{id}")
-   //    fun getEventById(eventId: String): Call<Event>
+    @GET("events/{id}.json") // Ajoutez le chemin avec paramètre
+    fun getEventById(@Path("id") eventId: String): Call<Event>
 
 }

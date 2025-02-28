@@ -14,46 +14,50 @@ class EventDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val eventId = intent.getStringExtra("event_id") ?: ""
+        // Get the parcelable event
+        val event = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra("event", Event::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getParcelableExtra("event") as? Event
+        }
 
         setContent {
-            EventDetailScreen(eventId)
+            event?.let {
+                EventDetailScreen(it)
+            } ?: run {
+                ErrorScreen()
+            }
         }
     }
 }
 
 @Composable
-fun EventDetailScreen(eventId: String) { // Renommé le paramètre à eventId
-    val viewModel = remember { EventsViewModel() }
-    val eventState by viewModel.selectedEvent.collectAsState()
-
-    // Appeler la méthode pour charger l'événement en fonction de l'ID
-    LaunchedEffect(eventId) {
-        viewModel.fetchEventDetail(eventId)
-    }
-
+fun EventDetailScreen(event: Event) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = event.title, style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = "Date : ${event.date}", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "Lieu : ${event.location}", style = MaterialTheme.typography.bodySmall)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = "Description : ${event.description}", style = MaterialTheme.typography.bodyMedium)
+        Text(text = "Catégorie : ${event.category}", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+fun ErrorScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        when {
-            eventState.isLoading -> CircularProgressIndicator()
-            eventState.error != null -> Text("Erreur : ${eventState.error}", color = MaterialTheme.colorScheme.error)
-            eventState.event != null -> {
-                val eventDetail = eventState.event!! // Renommé pour éviter le conflit
-                Text(text = eventDetail.title, style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Date : ${eventDetail.date}", style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Titre : ${eventDetail.title}", style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Lieu : ${eventDetail.location}", style = MaterialTheme.typography.bodySmall)
-                Text(text = "Description : ${eventDetail.description}", style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Catégorie : ${eventDetail.category}", style = MaterialTheme.typography.bodyMedium)
-
-            }
-            }
-        }
+        Text("Événement non trouvé", color = MaterialTheme.colorScheme.error)
     }
-
-
+}

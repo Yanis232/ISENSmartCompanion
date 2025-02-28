@@ -48,15 +48,14 @@ class EventsViewModel : ViewModel() {
         })
     }
 
-    // Fonction pour récupérer un événement spécifique par ID
+
     fun fetchEventDetail(eventId: String) {
         _selectedEvent.value = EventDetailState(isLoading = true)
 
-        // Modifier le type du Callback ici pour utiliser un seul Event
         ApiClient.instance.getEventById(eventId).enqueue(object : Callback<Event> {
             override fun onResponse(call: Call<Event>, response: Response<Event>) {
                 if (response.isSuccessful && response.body() != null) {
-                    _selectedEvent.value = EventDetailState(event = response.body())  // Mettre à jour l'état avec les détails de l'événement
+                    _selectedEvent.value = EventDetailState(event = response.body())
                 } else {
                     _selectedEvent.value = EventDetailState(error = "Erreur serveur : ${response.errorBody()?.string()}")
                 }

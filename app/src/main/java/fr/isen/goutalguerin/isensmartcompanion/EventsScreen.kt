@@ -35,9 +35,10 @@ fun EventsScreen(viewModel: EventsViewModel) {
                 LazyColumn {
                     items(eventsState.events) { event ->
                         EventCard(event) { selectedEvent ->
+                            // Change here: pass the entire event object instead of just the ID
                             context.startActivity(
                                 Intent(context, EventDetailActivity::class.java).apply {
-                                    putExtra("event_id", selectedEvent.id)
+                                    putExtra("event", selectedEvent)  // Pass the whole Event object
                                 }
                             )
                         }
@@ -62,6 +63,7 @@ fun EventCard(event: Event, onClick: (Event) -> Unit) {
             Text(text = event.title, style = MaterialTheme.typography.titleMedium)
             Text(text = "Date : ${event.date}", style = MaterialTheme.typography.bodyMedium)
             Text(text = "Lieu : ${event.location}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "id : ${event.id}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }
