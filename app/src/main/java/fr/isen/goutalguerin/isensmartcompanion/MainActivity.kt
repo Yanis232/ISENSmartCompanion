@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
@@ -34,6 +33,8 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -46,7 +47,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainApp()
+                    MainApp(application)
                 }
             }
         }
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MainApp() {
+fun MainApp(application: android.app.Application) {
     val navController = rememberNavController()
 
     Scaffold(
@@ -66,15 +67,45 @@ fun MainApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("home") {
-                val geminiViewModel: GeminiViewModel = viewModel()
+                val geminiViewModel: GeminiViewModel = viewModel(
+                    factory = GeminiViewModelFactory(application)
+                )
                 MainScreen(geminiViewModel)
             }
             composable("events") {
                 val eventsViewModel: EventsViewModel = viewModel()
                 EventsScreen(viewModel = eventsViewModel)
             }
-            composable("history") { HistoryScreen() }
+            composable("history") {
+                val historyViewModel: HistoryViewModel = viewModel(
+                    factory = HistoryViewModelFactory(application)
+                )
+                // Utiliser la fonction HistoryScreen du fichier HistoryScreen.kt
+                HistoryScreen(historyViewModel)
+            }
         }
+    }
+}
+
+// Factory pour créer le GeminiViewModel avec l'application
+class GeminiViewModelFactory(private val application: android.app.Application) : ViewModelProvider.Factory {
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        if (modelClass.isAssignableFrom(GeminiViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return GeminiViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+// Factory pour créer le HistoryViewModel avec l'application
+class HistoryViewModelFactory(private val application: android.app.Application) : ViewModelProvider.Factory {
+    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        if (modelClass.isAssignableFrom(HistoryViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return HistoryViewModel(application) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
 
@@ -247,18 +278,6 @@ fun BottomNavigationBar(navController: NavController) {
         }
     }
 }
-
-@Composable
-fun HistoryScreen() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = "Historique des interactions", fontSize = 24.sp)
-    }
-}
-
-
 
 data class BottomNavItem(val route: String, val label: String, val icon: ImageVector)
 
