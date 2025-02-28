@@ -8,7 +8,7 @@ interface ApiService {
     @GET("events.json")
     fun getEvents(): Call<List<Event>>
 
-    @GET("events/{id}.json") // Ajoutez le chemin avec paramètre
+    @GET("events/{id}.json")
     fun getEventById(@Path("id") eventId: String): Call<Event>
 
 }

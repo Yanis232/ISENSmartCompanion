@@ -1,28 +1,31 @@
 package fr.isen.goutalguerin.isensmartcompanion
 
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.*
 import fr.isen.goutalguerin.isensmartcompanion.ui.theme.ISENSmartCompanionTheme
@@ -30,8 +33,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.lifecycle.viewmodel.compose.viewModel  // This is to access the viewModel function
-
+import androidx.compose.material.icons.automirrored.filled.Send
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +44,7 @@ class MainActivity : ComponentActivity() {
             ISENSmartCompanionTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.background
                 ) {
                     MainApp()
                 }
@@ -62,11 +65,13 @@ fun MainApp() {
             startDestination = "home",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("home") { MainScreen() }
+            composable("home") {
+                val geminiViewModel: GeminiViewModel = viewModel()
+                MainScreen(geminiViewModel)
+            }
             composable("events") {
-                // Pass the EventsViewModel instance here
-                val eventsViewModel: EventsViewModel = viewModel()  // Create the ViewModel instance
-                EventsScreen(viewModel = eventsViewModel)  // Pass it to EventsScreen
+                val eventsViewModel: EventsViewModel = viewModel()
+                EventsScreen(viewModel = eventsViewModel)
             }
             composable("history") { HistoryScreen() }
         }
@@ -74,8 +79,156 @@ fun MainApp() {
 }
 
 @Composable
+fun MainScreen(viewModel: GeminiViewModel) {
+    val chatMessages by viewModel.chatMessages.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    var question by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Logo et titre
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color.Black,
+            modifier = Modifier.size(100.dp)
+        ) {
+            Image(
+                painter = painterResource(id = R.mipmap.ic_isen_app),
+                contentDescription = "Logo ISEN",
+                modifier = Modifier.padding(8.dp)
+            )
+        }
+
+        Text(
+            text = "ISEN Smart Companion",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(vertical = 8.dp)
+        )
+
+        // Liste des messages
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(chatMessages) { message ->
+                ChatBubble(message = message)
+            }
+        }
+
+        // Scroll to bottom when new message is added
+        LaunchedEffect(chatMessages.size) {
+            if (chatMessages.isNotEmpty()) {
+                coroutineScope.launch {
+                    listState.animateScrollToItem(chatMessages.size - 1)
+                }
+            }
+        }
+
+        // Champ de texte et bouton d'envoi
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = question,
+                onValueChange = { question = it },
+                placeholder = { Text("Posez votre question") },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(
+                    onSend = {
+                        if (question.isNotBlank() && !isLoading) {
+                            viewModel.sendMessage(question)
+                            question = ""
+                            keyboardController?.hide()
+                        }
+                    }
+                ),
+                singleLine = true
+            )
+
+            Button(
+                onClick = {
+                    if (question.isNotBlank() && !isLoading) {
+                        viewModel.sendMessage(question)
+                        question = ""
+                        keyboardController?.hide()
+                    }
+                },
+                enabled = !isLoading && question.isNotBlank(),
+                contentPadding = PaddingValues(12.dp)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Envoyer"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChatBubble(message: ChatMessage) {
+    val backgroundColor = if (message.isUserMessage)
+        MaterialTheme.colorScheme.primaryContainer
+    else
+        MaterialTheme.colorScheme.secondaryContainer
+
+    val textColor = if (message.isUserMessage)
+        MaterialTheme.colorScheme.onPrimaryContainer
+    else
+        MaterialTheme.colorScheme.onSecondaryContainer
+
+    val bubbleAlignment = if (message.isUserMessage) Alignment.CenterEnd else Alignment.CenterStart
+
+
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = bubbleAlignment
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = backgroundColor,
+            modifier = Modifier
+                .padding(vertical = 4.dp, horizontal = 8.dp)
+                .widthIn(max = 300.dp)
+        ) {
+            Text(
+                text = message.content,
+                color = textColor,
+                modifier = Modifier.padding(12.dp),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    }
+}
+
+@Composable
 fun BottomNavigationBar(navController: NavController) {
-    NavigationBar(containerColor = Color.Black) {
+    NavigationBar {
         val items = listOf(
             BottomNavItem("home", "Accueil", Icons.Default.Home),
             BottomNavItem("events", "Événements", Icons.Default.Event),
@@ -89,87 +242,9 @@ fun BottomNavigationBar(navController: NavController) {
                 selected = currentRoute == item.route,
                 onClick = { navController.navigate(item.route) },
                 icon = { Icon(imageVector = item.icon, contentDescription = item.label) },
-                label = { Text(item.label, color = Color.White) }
+                label = { Text(item.label) }
             )
         }
-    }
-}
-
-@Composable
-fun MainScreen() {
-    val context = LocalContext.current
-    var question by remember { mutableStateOf("") }
-    var response by remember { mutableStateOf("Prêt à répondre à vos questions !") }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 8.dp,
-            color = Color.Black,
-            modifier = Modifier.size(150.dp)
-        ) {
-            Image(
-                painter = painterResource(id = R.mipmap.ic_isen_app),
-                contentDescription = "Logo ISEN",
-                modifier = Modifier.padding(8.dp)
-            )
-        }
-
-        Text(
-            text = "ISEN Companion AI",
-            style = MaterialTheme.typography.headlineLarge,
-            color = Color.Black,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        OutlinedTextField(
-            value = question,
-            onValueChange = { question = it },
-            label = { Text("Posez votre question", color = Color.Black) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                cursorColor = Color.Black,
-                focusedBorderColor = Color.Black,
-                unfocusedBorderColor = Color.Gray
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Button(
-            onClick = {
-                Toast.makeText(context, "Question Submitted", Toast.LENGTH_SHORT).show()
-                response = if (question.isNotBlank()) {
-                    "Dernière question :\n${question.take(50)}"
-                } else {
-                    "Veuillez poser une question valide !"
-                }
-                question = ""
-            },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color.Black
-            ),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Envoyer")
-        }
-
-        Text(
-            text = response,
-            color = Color.Black,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        )
     }
 }
 
@@ -179,17 +254,11 @@ fun HistoryScreen() {
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = "Historique des interactions", color = Color.Black, fontSize = 24.sp)
+        Text(text = "Historique des interactions", fontSize = 24.sp)
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewMainApp() {
-    ISENSmartCompanionTheme {
-        MainApp()
-    }
-}
+
 
 data class BottomNavItem(val route: String, val label: String, val icon: ImageVector)
 

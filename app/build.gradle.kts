@@ -69,13 +69,21 @@ dependencies {
     //noinspection UseTomlInstead
     implementation ("com.google.code.gson:gson:2.10.1")
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.generativeai)
     implementation(libs.logging.interceptor)
     implementation (libs.retrofit.v290)
     implementation (libs.retrofit2.converter.gson)
+    implementation(libs.kotlinx.coroutines.android)
     // add the dependency for the Google AI client SDK for Android
     implementation(libs.generativeai)
+    // pour l'historique
+    implementation (libs.androidx.room.runtime)
+    //kapt (libs.androidx.room.compiler)
+    implementation (libs.androidx.room.ktx)
+
     // Coroutines
     implementation (libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.room.common)
     debugImplementation (libs.ui.tooling)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

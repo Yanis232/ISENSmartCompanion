@@ -185,24 +185,6 @@ fun EventDetailScreen(event: Event, onBackPressed: () -> Unit) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // ID at the bottom for reference
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "ID: ",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-                Text(
-                    text = event.id,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
         }
     }
 }
