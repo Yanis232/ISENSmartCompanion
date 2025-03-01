@@ -11,18 +11,30 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class GeminiViewModel(application: Application) : AndroidViewModel(application) {
-    private val apiKey = "AIzaSyCAFbzxwIFotsjKZT_WiBjonGTTdBMEjaU" //importer la clé depuis GEMINI_API_KEY
 
-    private val generativeModel = GenerativeModel(
-        modelName = "gemini-1.5-flash",
-        apiKey = apiKey,
-        generationConfig = generationConfig {
-            temperature = 0.7f
-            topK = 40
-            topP = 0.95f
-            maxOutputTokens = 1024
-        }
+    private val apiKey = BuildConfig.GEMINI_API_KEY
+
+    // Liste des modèles disponibles
+    val availableModels = listOf(
+        "gemini-2.0-pro-exp-02-05",
+        "gemini-2.0-flash-thinking-exp-01-21",
+        "gemini-2.0-flash-exp",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-pro",
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-flash",
+
     )
+
+    // État pour stocker le modèle actuellement sélectionné
+    private val _selectedModel = MutableStateFlow("gemini-2.0-pro-exp-02-05")
+    val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
+
+    // Modèle génératif
+    private var generativeModel = createGenerativeModel(_selectedModel.value)
+
+    // Session de chat (maintient l'historique de la conversation)
+    private var chatSession = generativeModel.startChat()
 
     // Repository pour les conversations
     private val repository: ConversationRepository
@@ -42,6 +54,34 @@ class GeminiViewModel(application: Application) : AndroidViewModel(application) 
         repository = ConversationRepository(conversationDao)
     }
 
+    // Fonction pour créer un modèle génératif avec le nom de modèle spécifié
+    private fun createGenerativeModel(modelName: String): GenerativeModel {
+        return GenerativeModel(
+            modelName = modelName,
+            apiKey = apiKey,
+            generationConfig = generationConfig {
+                temperature = 0.6f
+                topK = 50
+                topP = 0.92f
+                maxOutputTokens = 4096
+            }
+        )
+    }
+
+    // Fonction pour changer le modèle
+    fun setModel(modelName: String) {
+        if (modelName in availableModels) {
+            _selectedModel.value = modelName
+            generativeModel = createGenerativeModel(modelName)
+
+            // Réinitialiser la session de chat avec le nouveau modèle
+            chatSession = generativeModel.startChat()
+
+            // Ajouter un message indiquant le changement de modèle
+            _chatMessages.value += ChatMessage("Modèle changé pour $modelName. L'historique de conversation a été réinitialisé.", false)
+        }
+    }
+
     fun sendMessage(userMessage: String) {
         if (userMessage.isBlank()) return
 
@@ -53,8 +93,8 @@ class GeminiViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch {
             try {
-                // Générer une réponse de Gemini
-                val response = generativeModel.generateContent(userMessage)
+                // Utiliser la session de chat pour envoyer le message et obtenir une réponse
+                val response = chatSession.sendMessage(userMessage)
                 val responseText = response.text ?: "Désolé, je n'ai pas pu générer de réponse."
 
                 // Ajouter la réponse à la liste des messages
@@ -73,5 +113,14 @@ class GeminiViewModel(application: Application) : AndroidViewModel(application) 
                 _isLoading.value = false
             }
         }
+    }
+
+    // Fonction pour effacer l'historique de conversation
+    fun clearConversation() {
+        // Réinitialiser la session de chat
+        chatSession = generativeModel.startChat()
+
+        // Réinitialiser les messages affichés
+        _chatMessages.value = listOf(ChatMessage("Conversation réinitialisée. Prêt à répondre à vos questions !", false))
     }
 }
