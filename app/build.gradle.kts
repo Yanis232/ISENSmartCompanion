@@ -27,6 +27,11 @@ android {
 
 
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/DEPENDENCIES"
+        }
+    }
 
     buildTypes {
         release {
@@ -103,6 +108,15 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    implementation (libs.google.api.client)
+    implementation (libs.google.oauth.client.jetty)
+    implementation (libs.google.api.services.calendar)
+
+    implementation ("com.google.android.gms:play-services-auth:20.7.0")// Pour Google Sign-In
+    implementation ("com.google.api-client:google-api-client-android:2.2.0") // Spécifique à Android
+    implementation ("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
+
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 }
 
 configurations.all {
