@@ -11,7 +11,8 @@ data class Event(
     @SerializedName("description") val description: String,
     @SerializedName("date") val date: String,
     @SerializedName("location") val location: String,
-    @SerializedName("category") val category: String
+    @SerializedName("category") val category: String,
+    val isNotificationEnabled: Boolean = false
 ) : Parcelable
 
 //Représenter un événement avec ses différentes propriétés (id, titre, description, date, lieu, catégorie).

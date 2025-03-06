@@ -73,9 +73,24 @@ dependencies {
     implementation (libs.retrofit2.converter.gson)
 
     implementation(libs.compiler)
+    implementation(libs.androidx.core)
+    implementation(libs.androidx.core)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
+
+    implementation ("androidx.compose.animation:animation:1.6.0")
+    implementation ("androidx.compose.foundation:foundation:1.6.0")
+    implementation ("androidx.compose.material:material-icons-extended:1.6.0")
+
+    implementation ("androidx.work:work-runtime-ktx:2.7.1")
+    implementation ("com.google.accompanist:accompanist-permissions:0.28.0")
+
+  
+    implementation ("androidx.compose.material3:material3:1.2.0")
+
+    implementation(libs.androidx.core.ktx.v1120)
+    implementation(libs.androidx.datastore.preferences)
 
     // Coroutines
     implementation (libs.kotlinx.coroutines.android)

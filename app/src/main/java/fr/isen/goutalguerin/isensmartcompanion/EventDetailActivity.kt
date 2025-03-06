@@ -1,5 +1,9 @@
 package fr.isen.goutalguerin.isensmartcompanion
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -8,19 +12,24 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 class EventDetailActivity : ComponentActivity() {
+    companion object {
+        private const val NOTIFICATION_CHANNEL_ID = "event_reminders"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -31,6 +40,8 @@ class EventDetailActivity : ComponentActivity() {
             intent.getParcelableExtra("event") as? Event
         }
 
+        createNotificationChannel()
+
         setContent {
             event?.let {
                 EventDetailScreen(it, onBackPressed = { finish() })
@@ -39,12 +50,33 @@ class EventDetailActivity : ComponentActivity() {
             }
         }
     }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Event Reminders"
+            val descriptionText = "Notifications for upcoming events"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, name, importance).apply {
+                description = descriptionText
+            }
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventDetailScreen(event: Event, onBackPressed: () -> Unit) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+
+    // Get the notification state from SharedPreferences
+    val sharedPrefs = context.getSharedPreferences("EventPreferences", Context.MODE_PRIVATE)
+    var isNotificationEnabled by remember {
+        mutableStateOf(sharedPrefs.getBoolean("notification_${event.id}", event.isNotificationEnabled))
+    }
 
     Scaffold(
         topBar = {
@@ -55,6 +87,39 @@ fun EventDetailScreen(event: Event, onBackPressed: () -> Unit) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Retour"
+                        )
+                    }
+                },
+                actions = {
+                    // Notification toggle icon
+                    IconButton(onClick = {
+                        // Toggle notification state
+                        isNotificationEnabled = !isNotificationEnabled
+
+                        // Save to SharedPreferences
+                        sharedPrefs.edit().putBoolean("notification_${event.id}", isNotificationEnabled).apply()
+
+                        // Show feedback to user
+                        val message = if (isNotificationEnabled)
+                            "Notification activée pour ${event.title}"
+                        else
+                            "Notification désactivée pour ${event.title}"
+
+                        // Display toast or snackbar with message
+                        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+
+                        // Schedule notification if enabled
+                        if (isNotificationEnabled) {
+                            NotificationScheduler.scheduleNotification(context, event)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (isNotificationEnabled)
+                                Icons.Outlined.NotificationsActive
+                            else
+                                Icons.Outlined.Notifications,
+                            contentDescription = "Activer/désactiver la notification",
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 },
@@ -184,7 +249,6 @@ fun EventDetailScreen(event: Event, onBackPressed: () -> Unit) {
                     )
                 }
             }
-
         }
     }
 }

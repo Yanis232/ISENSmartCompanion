@@ -3,9 +3,6 @@ package fr.isen.goutalguerin.isensmartcompanion
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import fr.isen.goutalguerin.isensmartcompanion.AppDatabase
-import fr.isen.goutalguerin.isensmartcompanion.Conversation
-import fr.isen.goutalguerin.isensmartcompanion.ConversationRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn

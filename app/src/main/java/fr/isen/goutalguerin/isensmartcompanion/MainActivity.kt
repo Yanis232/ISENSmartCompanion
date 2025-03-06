@@ -1,9 +1,14 @@
 package fr.isen.goutalguerin.isensmartcompanion
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,11 +41,35 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import kotlinx.coroutines.launch
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.ui.text.style.TextOverflow
+import android.widget.Toast
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import kotlinx.coroutines.delay
+
 
 class MainActivity : ComponentActivity() {
+        private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+
+        } else {
+            Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        requestNotificationPermission()
+
         setContent {
             ISENSmartCompanionTheme {
                 Surface(
@@ -48,6 +77,24 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     MainApp(application)
+                }
+            }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                }
+                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
         }
@@ -80,12 +127,12 @@ fun MainApp(application: android.app.Application) {
                 val historyViewModel: HistoryViewModel = viewModel(
                     factory = HistoryViewModelFactory(application)
                 )
-                // Utiliser la fonction HistoryScreen du fichier HistoryScreen.kt
                 HistoryScreen(historyViewModel)
             }
         }
     }
 }
+
 
 // Factory pour créer le GeminiViewModel avec l'application
 class GeminiViewModelFactory(private val application: android.app.Application) : ViewModelProvider.Factory {
@@ -113,10 +160,14 @@ class HistoryViewModelFactory(private val application: android.app.Application) 
 fun MainScreen(viewModel: GeminiViewModel) {
     val chatMessages by viewModel.chatMessages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val selectedModel by viewModel.selectedModel.collectAsState()
     var question by remember { mutableStateOf("") }
+    var showModelSelector by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val keyboardController = LocalSoftwareKeyboardController.current
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
 
     Column(
         modifier = Modifier
@@ -145,6 +196,101 @@ fun MainScreen(viewModel: GeminiViewModel) {
             modifier = Modifier.padding(vertical = 8.dp)
         )
 
+        // Contrôles de conversation
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Modèle: $selectedModel",
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp)
+                )
+                Button(
+                    onClick = { showModelSelector = !showModelSelector },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text("Changer")
+                }
+            }
+
+            OutlinedButton(
+                onClick = { viewModel.clearConversation() },
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.padding(start = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Réinitialiser",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Réinitialiser")
+            }
+        }
+
+        // Liste déroulante
+        AnimatedVisibility(visible = showModelSelector) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+                    .padding(bottom = 8.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Choisir un modèle",
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
+                    items(viewModel.availableModels) { model ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    viewModel.setModel(model)
+                                    showModelSelector = false
+                                }
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = model == selectedModel,
+                                onClick = {
+                                    viewModel.setModel(model)
+                                    showModelSelector = false
+                                }
+                            )
+                            Text(
+                                text = model,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Liste des messages
         LazyColumn(
             state = listState,
@@ -155,20 +301,17 @@ fun MainScreen(viewModel: GeminiViewModel) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(chatMessages) { message ->
-                ChatBubble(message = message)
+                ChatBubble(
+                    message = message,
+                    onCopyClicked = { text ->
+                        clipboardManager.setText(AnnotatedString(text))
+                        Toast.makeText(context, "Réponse copiée !", Toast.LENGTH_SHORT).show()
+                    }
+                )
             }
         }
 
-        // Scroll to bottom when new message is added
-        LaunchedEffect(chatMessages.size) {
-            if (chatMessages.isNotEmpty()) {
-                coroutineScope.launch {
-                    listState.animateScrollToItem(chatMessages.size - 1)
-                }
-            }
-        }
-
-        // Champ de texte et bouton d'envoi
+        // Champ de saisie
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -208,8 +351,8 @@ fun MainScreen(viewModel: GeminiViewModel) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
+                        strokeWidth = 2.dp)
+
                 } else {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
@@ -219,10 +362,19 @@ fun MainScreen(viewModel: GeminiViewModel) {
             }
         }
     }
+
+    LaunchedEffect(chatMessages.size) {
+        if (chatMessages.isNotEmpty()) {
+            coroutineScope.launch {
+                listState.animateScrollToItem(chatMessages.size - 1)
+            }
+        }
+    }
 }
 
 @Composable
-fun ChatBubble(message: ChatMessage) {
+fun ChatBubble(message: ChatMessage, onCopyClicked: (String) -> Unit = {}) {
+    var isCopied by remember { mutableStateOf(false) }
     val backgroundColor = if (message.isUserMessage)
         MaterialTheme.colorScheme.primaryContainer
     else
@@ -233,12 +385,16 @@ fun ChatBubble(message: ChatMessage) {
     else
         MaterialTheme.colorScheme.onSecondaryContainer
 
-    val bubbleAlignment = if (message.isUserMessage) Alignment.CenterEnd else Alignment.CenterStart
-
+    LaunchedEffect(isCopied) {
+        if (isCopied) {
+            delay(2000)
+            isCopied = false
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxWidth(),
-        contentAlignment = bubbleAlignment
+        contentAlignment = if (message.isUserMessage) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -247,12 +403,40 @@ fun ChatBubble(message: ChatMessage) {
                 .padding(vertical = 4.dp, horizontal = 8.dp)
                 .widthIn(max = 300.dp)
         ) {
-            Text(
-                text = message.content,
-                color = textColor,
-                modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = message.content,
+                    color = textColor,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                if (!message.isUserMessage) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                isCopied = true
+                                onCopyClicked(message.content)
+                            },
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (isCopied) "Copié !" else "Copier",
+                            color = textColor.copy(alpha = 0.7f),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = "Copier",
+                            tint = textColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
