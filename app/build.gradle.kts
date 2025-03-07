@@ -3,8 +3,9 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)  // This should match "kotlin = '1.9.0'" in the TOML
+    alias(libs.plugins.kotlin.compose)
     id("kotlin-parcelize")
+    id("kotlinx-serialization")
     alias(libs.plugins.com.google.devtools.ksp.gradle.plugin)
     alias(libs.plugins.com.google.android.libraries.mapsplatform.secrets.gradle.plugin.gradle.plugin)
 
@@ -70,8 +71,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.compose.material3.material3)
     implementation (libs.retrofit)
-    //noinspection UseTomlInstead
-    implementation ("com.google.code.gson:gson:2.10.1")
+    implementation (libs.gson)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.generativeai)
     implementation(libs.logging.interceptor)
@@ -84,15 +84,15 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
 
-    implementation ("androidx.compose.animation:animation:1.6.0")
-    implementation ("androidx.compose.foundation:foundation:1.6.0")
-    implementation ("androidx.compose.material:material-icons-extended:1.6.0")
+    implementation (libs.androidx.animation)
+    implementation (libs.androidx.foundation)
+    implementation (libs.androidx.material.icons.extended.v160)
 
-    implementation ("androidx.work:work-runtime-ktx:2.7.1")
-    implementation ("com.google.accompanist:accompanist-permissions:0.28.0")
+    implementation (libs.androidx.work.runtime.ktx)
+    implementation (libs.accompanist.permissions)
 
   
-    implementation ("androidx.compose.material3:material3:1.2.0")
+    implementation (libs.androidx.material3.v120)
 
     implementation(libs.androidx.core.ktx.v1120)
     implementation(libs.androidx.datastore.preferences)
@@ -112,11 +112,13 @@ dependencies {
     implementation (libs.google.oauth.client.jetty)
     implementation (libs.google.api.services.calendar)
 
-    implementation ("com.google.android.gms:play-services-auth:20.7.0")// Pour Google Sign-In
-    implementation ("com.google.api-client:google-api-client-android:2.2.0") // Spécifique à Android
-    implementation ("com.google.apis:google-api-services-calendar:v3-rev20220715-2.0.0")
+    implementation (libs.kotlinx.datetime)
+    implementation (libs.kotlinx.serialization.json)
 
-    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    implementation (libs.kotlinx.coroutines.android.v164)
+    implementation (libs.androidx.activity.compose.v180)
+    implementation (libs.androidx.navigation.compose.v270)
+    implementation (libs.kotlinx.serialization.json.v160)
 }
 
 configurations.all {

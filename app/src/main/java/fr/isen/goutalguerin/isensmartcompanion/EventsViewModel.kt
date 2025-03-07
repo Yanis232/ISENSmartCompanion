@@ -20,14 +20,14 @@ class EventsViewModel : ViewModel() {
         fetchEvents()
     }
 
-    // Fonction pour récupérer la liste des événements
+    //pourrécupérer la liste des événements
     private fun fetchEvents() {
         _events.value = EventsState(isLoading = true)
 
         ApiClient.instance.getEvents().enqueue(object : Callback<List<Event>> {
             override fun onResponse(call: Call<List<Event>>, response: Response<List<Event>>) {
                 if (response.isSuccessful && response.body() != null) {
-                    _events.value = EventsState(events = response.body()!!)  // Mettre à jour l'état avec les événements
+                    _events.value = EventsState(events = response.body()!!)
                 } else {
                     _events.value = EventsState(error = "Erreur serveur : ${response.errorBody()?.string()}")
                 }

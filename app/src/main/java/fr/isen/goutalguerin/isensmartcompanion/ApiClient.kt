@@ -26,8 +26,4 @@ object ApiClient {
     }
 }
 
-// Retrofit pour envoyer des requêtes à Firebase.
-// convertira automatiquement les réponses JSON en objets Kotlin grâce à GsonConverterFactory.
-
-
 

@@ -15,4 +15,4 @@ data class Event(
     val isNotificationEnabled: Boolean = false
 ) : Parcelable
 
-//Représenter un événement avec ses différentes propriétés (id, titre, description, date, lieu, catégorie).
+//pour représenter un événement avec ses différentes propriétés (id, titre, description, date, lieu, catégorie).
